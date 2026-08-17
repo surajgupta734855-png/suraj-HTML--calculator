@@ -1,1 +1,238 @@
-# suraj-HTML--calculator
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SU_PHYHBTU - Magnetic Unit Converter</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+        .app-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 480px;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h2 {
+            color: #1e3a8a;
+            font-size: 22px;
+        }
+        .header p {
+            color: #6b7280;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        select, input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        select:focus, input[type="number"]:focus {
+            border-color: #2563eb;
+        }
+        .radio-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 6px;
+        }
+        .radio-label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #4b5563;
+            transition: background 0.2s;
+        }
+        .radio-group input[type="radio"] {
+            display: none;
+        }
+        .radio-group input[type="radio"]:checked + .radio-label {
+            background: #2563eb;
+            color: #ffffff;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 16px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            display: none;
+        }
+        .result-box h3 {
+            color: #1e40af;
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+        .result-text {
+            font-size: 15px;
+            color: #1e3a8a;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-card">
+    <div class="header">
+        <h2>🧲 SU_PHYHBTU</h2>
+        <p>SI ↔ CGS Magnetic Quantity Converter (NPH-605)</p>
+    </div>
+
+    <div class="form-group">
+        <label for="quantitySelect">Physical Quantity</label>
+        <select id="quantitySelect" onchange="updateUnits()"></select>
+    </div>
+
+    <div class="form-group">
+        <label>Direction</label>
+        <div class="radio-group">
+            <input type="radio" id="si_to_cgs" name="direction" value="SI_CGS" checked onchange="updateUnits()">
+            <label for="si_to_cgs" class="radio-label">SI → CGS</label>
+
+            <input type="radio" id="cgs_to_si" name="direction" value="CGS_SI" onchange="updateUnits()">
+            <label for="cgs_to_si" class="radio-label">CGS → SI</label>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label id="inputLabel" for="inputValue">Enter Value</label>
+        <input type="number" id="inputValue" value="1" step="any">
+    </div>
+
+    <button onclick="convert()">Convert</button>
+
+    <div class="result-box" id="resultBox">
+        <h3>Result</h3>
+        <div class="result-text" id="resultText"></div>
+    </div>
+</div>
+
+<script>
+    // Exact factors from Assignment Table (1 SI unit = factor * CGS unit)
+    const quantities = [
+        { name: "Magnetic induction (B)", si: "Tesla (T)", cgs: "Gauss (G)", factor: 1e4 },
+        { name: "Magnetic field strength (H)", si: "A m⁻¹", cgs: "Oersted (Oe)", factor: 4 * Math.PI * 1e-3 },
+        { name: "Magnetization (M)", si: "A m⁻¹", cgs: "emu cm⁻³", factor: 1e-3 },
+        { name: "Magnetic polarization (J)", si: "Tesla (T)", cgs: "Gauss (G)", factor: 1e4 },
+        { name: "Magnetic moment (m)", si: "A m²", cgs: "emu", factor: 1e3 },
+        { name: "Magnetic moment per unit mass (σ)", si: "A m² kg⁻¹", cgs: "emu g⁻¹", factor: 1.0 },
+        { name: "Volume magnetic susceptibility (χ)", si: "dimensionless", cgs: "dimensionless", factor: 1 / (4 * Math.PI) },
+        { name: "Mass magnetic susceptibility (χ_mass)", si: "m³ kg⁻¹", cgs: "emu g⁻¹", factor: 1e3 / (4 * Math.PI) },
+        { name: "Molar magnetic susceptibility (χ_m) [CORRECTED]", si: "m³ mol⁻¹", cgs: "emu mol⁻¹", factor: 1e6 / (4 * Math.PI) },
+        { name: "Magnetic permeability (μ)", si: "H m⁻¹", cgs: "G Oe⁻¹", factor: 1e7 / (4 * Math.PI) },
+        { name: "Magnetic flux (Φ)", si: "Weber (Wb)", cgs: "Maxwell (Mx)", factor: 1e8 },
+        { name: "Magnetic scalar potential / MMF (φ, F)", si: "Ampere (A)", cgs: "Gilbert (Gb)", factor: (4 * Math.PI) / 10 },
+        { name: "Magnetic vector potential (A)", si: "Wb m⁻¹", cgs: "emu cm⁻¹", factor: 1e6 },
+        { name: "Magnetic pole strength (p)", si: "A m", cgs: "emu", factor: 10.0 },
+        { name: "Demagnetizing factor (N)", si: "dimensionless", cgs: "dimensionless", factor: 4 * Math.PI },
+        { name: "Magnetostriction constant (λ)", si: "dimensionless", cgs: "dimensionless", factor: 1.0 },
+        { name: "Anisotropy constant (K, K1, Ku)", si: "J m⁻³", cgs: "erg cm⁻³", factor: 10.0 },
+        { name: "Magnetostatic energy (Em)", si: "J m⁻³", cgs: "erg cm⁻³", factor: 10.0 },
+        { name: "Energy product ((BH)max)", si: "J m⁻³", cgs: "erg cm⁻³", factor: 10.0 }
+    ];
+
+    const selectEl = document.getElementById("quantitySelect");
+
+    function init() {
+        quantities.forEach((q, index) => {
+            const option = document.createElement("option");
+            option.value = index;
+            option.textContent = q.name;
+            selectEl.appendChild(option);
+        });
+        updateUnits();
+    }
+
+    function updateUnits() {
+        const selected = quantities[selectEl.value];
+        const isSiToCgs = document.getElementById("si_to_cgs").checked;
+        const fromUnit = isSiToCgs ? selected.si : selected.cgs;
+        document.getElementById("inputLabel").textContent = `Enter Value (${fromUnit})`;
+        document.getElementById("resultBox").style.display = "none";
+    }
+
+    function convert() {
+        const val = parseFloat(document.getElementById("inputValue").value);
+        if (isNaN(val)) return;
+
+        const selected = quantities[selectEl.value];
+        const isSiToCgs = document.getElementById("si_to_cgs").checked;
+
+        let res, fromUnit, toUnit;
+
+        if (isSiToCgs) {
+            res = val * selected.factor;
+            fromUnit = selected.si;
+            toUnit = selected.cgs;
+        } else {
+            res = val / selected.factor;
+            fromUnit = selected.cgs;
+            toUnit = selected.si;
+        }
+
+        const resultBox = document.getElementById("resultBox");
+        const resultText = document.getElementById("resultText");
+
+        resultText.innerHTML = `<b>${val.toExponential(4)}</b> ${fromUnit} = <br><b>${res.toExponential(6)}</b> ${toUnit}`;
+        resultBox.style.display = "block";
+    }
+
+    window.onload = init;
+</script>
+
+</body>
+</html>
